@@ -31,23 +31,12 @@ Package Git::Mailmap is currently being developed so changes in the API and func
 
 =head1 SYNOPSIS
 
-    use IO::Iron;
-    use IO::Iron qw{ironcache ironmq ironworker};
-    use IO::Iron ':all';
-
-    my $iron_mq_client = ironmq();
-    my @iron_mq_queues = $iron_mq_client->get_queues();
-
-    my $iron_cache_client = ironcache( config => 'iron_cache.json' );
-    my @iron_caches = $iron_cache_client->get_caches();
-
-    my $iron_worker_client = ironworker( config => 'iron_worker.json' );
-    my @iron_codes = $iron_worker_client->list_code_packages();
-
+    require Git::Mailmap;
+    my $mailmap = Git::Mailmap->new();
 
 =head1 REQUIREMENTS
 
-The IO::Iron::* packages require the following packages (in addition to several Perl core packages):
+The Git::Mailmap package require the following packages (in addition to normal Perl core packages):
 
 =over 8
 
