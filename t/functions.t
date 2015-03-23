@@ -70,7 +70,8 @@ push @{$expected_mailmap{'committers'}}, {
 };
 is_deeply($mailmap, \%expected_mailmap, 'Object has four committers, one has two emails.');
 
-write
+my $mailmap_file = $maipmap->write();
+is :
 my $expected_mailmap_file =
 '<cto@company.xx>                       <cto@coompany.xx>
 Some Dude <some@dude.xx>         nick1 <bugs@company.xx>

@@ -275,10 +275,7 @@ sub write {
     my $self = shift;
     my %params = validate(
         @_, {
-            'proper-email' => { type => SCALAR, },
-            'proper-name' => { type => SCALAR, optional => 1, depends => ['proper-email'], },
-            'commit-email' => { type => SCALAR, optional => 1, },
-            'commit-name' => { type => SCALAR, optional => 1, depends => ['commit-email'], },
+            'filename' => { type => SCALAR, optional => 1, },
         }
     );
     $log->tracef('Entering write(%s)', \%params);
