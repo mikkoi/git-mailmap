@@ -26,7 +26,7 @@ END {
 
 =head1 STATUS
 
-Package Git::Mailmap is currently being developed so changes in the API and functionality are possible.
+Package Git::Mailmap is currently being developed so changes in the API and functionality are possible, though not likely.
 
 
 =head1 SYNOPSIS
@@ -46,14 +46,12 @@ The Git::Mailmap package require the following packages (in addition to normal P
 
 =cut
 
-use File::Slurp qw{read_file};
-use Log::Any  qw{$log};
-use File::Spec qw{read_file};
-use File::HomeDir;
+use Log::Any qw{$log};
+# use File::Spec qw{read_file};
 use Hash::Util 0.06 qw{lock_keys lock_keys_plus unlock_keys};
 use Carp::Assert;
 use Carp::Assert::More;
-use English '-no_match_vars';
+# use English '-no_match_vars';
 use Params::Validate qw(:all);
 
 
@@ -85,8 +83,7 @@ sub new {
 
 =head2 add
 
-Add new committer.
-Params:
+Add new committer. Add all the information.
 
 =over 8
 
@@ -98,9 +95,9 @@ Params:
 
 =item I<proper-name>, not mandatory
 
-=item I<alias-email>, not mandatory
+=item I<commit-email>, not mandatory
 
-=item I<alias-name>, not mandatory
+=item I<commit-name>, not mandatory
 
 =back
 
@@ -115,21 +112,21 @@ sub add {
     my %params = validate(
         @_, {
             'proper-email' => { type => SCALAR, },
-            'proper-name' => { type => SCALAR, optional => 1, },
+            'proper-name' => { type => SCALAR, optional => 1, depends => ['proper-email'], },
             'commit-email' => { type => SCALAR, optional => 1, },
-            'commit-name' => { type => SCALAR, optional => 1, },
+            'commit-name' => { type => SCALAR, optional => 1, depends => ['commit-email'], },
         }
     );
     $log->tracef('Entering add(%s)', \%params);
-    assert_nonblank( $params{'proper-email'}, 'Parameter \'proper-email\' is a non-blank string' );
+    assert_nonblank( $params{'proper-email'}, 'Parameter \'proper-email\' is a non-blank string.' );
     my $committer;
     foreach my $for_committer (@{$self->{'committers'}}) {
         if($for_committer->{'proper-email'} eq $params{'proper-email'}) {
             $for_committer->{'proper-name'} = $params{'proper-name'} if($params{'proper-name'});
-            assert_arrayref($committer->{'aliases'}, 'Item \'aliases\' exists.');
-            my @aliases = @{$committer->{'aliases'}};
+            assert_listref($for_committer->{'aliases'}, 'Item \'aliases\' exists.');
+            my $aliases = $for_committer->{'aliases'};
             my $alias;
-            foreach my $for_alias (@aliases) {
+            foreach my $for_alias (@{$aliases}) {
                 if($for_alias->{'commit-email'} eq $params{'commit-email'}) {
                     $for_alias->{'commit-name'} = $params{'commit-name'};
                     $for_alias = $for_alias;
@@ -139,7 +136,7 @@ sub add {
             if(! defined $alias) {
                 $alias = { 'commit-email' => $params{'commit-email'} };
                 $alias->{'commit-name'} = $params{'commit-name'} if($params{'commit-name'});
-                push @aliases, $alias;
+                push @{$aliases}, $alias;
             }
             $committer = $for_committer;
             last;
@@ -157,6 +154,171 @@ sub add {
         }
         push @{$self->{'committers'}}, $committer;
     }
+    $log->tracef('Exiting add: %s', $self);
+    return;
+}
+
+=head2 remove
+
+Remove committer information. Remove as much information as you can. This method is very limited.
+
+=over 8
+
+=item Parameters:
+
+=over 8
+
+=item I<proper-email>, mandatory. If you specify only this, the whole entry (with proper-name and aliases) will be removed. Other combinations are not supported.
+
+=item I<proper-name>, not mandatory. Not supported.
+
+=item I<commit-email>, not mandatory. If you specify only this, every entry will be checked, and all aliases with this commit email will be removed. If you specify this together with proper-email, only the alias in the entry with that proper-email will be removed.
+
+=item I<commit-name>, not mandatory. Not supported.
+
+=item I<all>, not mandatory. Cannot be used together with other parameters. Removes all committers.
+
+=back
+
+=item Return: [NONE]
+
+=back
+
+=cut
+
+sub remove {
+    my $self = shift;
+    my %params = validate(
+        @_, {
+            'proper-email' => { type => SCALAR, optional => 1, },
+            'proper-name' => { type => SCALAR, optional => 1, },
+            'commit-email' => { type => SCALAR, optional => 1, },
+            'commit-name' => { type => SCALAR, optional => 1, },
+            'all' => { type => BOOLEAN, optional => 1, },
+        }
+    );
+    $log->tracef('Entering remove(%s)', \%params);
+    assert(
+            (
+                defined $params{'all'}
+                && !defined $params{'proper-email'} && !defined$params{'proper-name'}
+                && ! defined$params{'commit-email'} && ! defined$params{'commit-name'}
+            )
+            || (
+                ! defined $params{'all'}
+                && ( defined $params{'proper-email'} || defined$params{'proper-name'}
+                || defined$params{'commit-email'} || defined$params{'commit-name'} )
+            ),
+            'Parameter \'all\' is only present without other parameters.' );
+    if(defined $params{'all'} && $params{'all'} eq '1') {
+        @{$self->{'committers'}} = [ ];
+    }
+    else {
+        for( my $i = 0; $i < scalar @{$self->{'committers'}}; ) {
+            my $for_committer = $self->{'committers'}->[$i];
+            if( $for_committer->{'proper-email'} eq $params{'proper-email'}
+		    || ! defined $params{'commit-email'} ) {
+		if( ! defined $params{'commit-email'} ) {
+			# Cut away the whole list entry.
+                    splice @{$self->{'committers'}}, $i, 1;
+                }
+		else {
+		    # Don't cut away the whole entry, just the matching aliases.
+                    assert_arrayref($for_committer->{'aliases'}, 'Item \'aliases\' exists.');
+                    my $aliases = $for_committer->{'aliases'};
+                    my $alias;
+                    for( my $j = 0; $j < scalar @{$aliases}; ) {
+                        my $for_alias = $aliases->[$i];
+                        if($for_alias->{'commit-email'} eq $params{'commit-email'}) {
+                            splice @{$aliases}, $i, 1;
+                            last;
+                        }
+			else {
+				$i++;
+			}
+                    }
+                }
+            }
+            else {
+                $i++;
+            }
+        }
+    }
+    $log->tracef('Exiting remove: %s', $self);
+    return;
+}
+
+=head2 write
+
+Write to file or return a string. If you give the parameter I<filename>, 
+the mailmap will be written directly to file. If you give no parameters,
+this method will return a string consisting of the same text which otherwise
+would have been written to a file.
+
+=over 8
+
+=item Parameters:
+
+=over 8
+
+=item I<filename>, not mandatory.
+
+=back
+
+=item Return: [NONE] or string.
+
+=back
+
+=cut
+
+sub write {
+    my $self = shift;
+    my %params = validate(
+        @_, {
+            'proper-email' => { type => SCALAR, },
+            'proper-name' => { type => SCALAR, optional => 1, depends => ['proper-email'], },
+            'commit-email' => { type => SCALAR, optional => 1, },
+            'commit-name' => { type => SCALAR, optional => 1, depends => ['commit-email'], },
+        }
+    );
+    $log->tracef('Entering write(%s)', \%params);
+    assert_nonblank( $params{'proper-email'}, 'Parameter \'proper-email\' is a non-blank string.' );
+    my $committer;
+    foreach my $for_committer (@{$self->{'committers'}}) {
+        if($for_committer->{'proper-email'} eq $params{'proper-email'}) {
+            $for_committer->{'proper-name'} = $params{'proper-name'} if($params{'proper-name'});
+            assert_listref($for_committer->{'aliases'}, 'Item \'aliases\' exists.');
+            my $aliases = $for_committer->{'aliases'};
+            my $alias;
+            foreach my $for_alias (@{$aliases}) {
+                if($for_alias->{'commit-email'} eq $params{'commit-email'}) {
+                    $for_alias->{'commit-name'} = $params{'commit-name'};
+                    $for_alias = $for_alias;
+                    last;
+                }
+            }
+            if(! defined $alias) {
+                $alias = { 'commit-email' => $params{'commit-email'} };
+                $alias->{'commit-name'} = $params{'commit-name'} if($params{'commit-name'});
+                push @{$aliases}, $alias;
+            }
+            $committer = $for_committer;
+            last;
+        }
+    }
+    if(! defined $committer) {
+        $committer = { 'proper-email' => $params{'proper-email'} };
+        $committer->{'proper-name'} = $params{'proper-name'} if($params{'proper-name'});
+        $committer->{'aliases'} = [ ];
+        my $alias;
+        if($params{'commit-email'}) {
+            $alias = { 'commit-email' => $params{'commit-email'} };
+            $alias->{'commit-name'} = $params{'commit-name'} if($params{'commit-name'});
+            push @{$committer->{'aliases'}}, $alias;
+        }
+        push @{$self->{'committers'}}, $committer;
+    }
+    $log->tracef('Exiting write: %s', $self);
     return;
 }
 

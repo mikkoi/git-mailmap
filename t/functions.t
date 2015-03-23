@@ -33,26 +33,45 @@ push @{$expected_mailmap{'committers'}}, {
 };
 is_deeply($mailmap, \%expected_mailmap, 'Object has two committers.');
 
-
-my %mailmap_data = (
-    'committers' => [
-        {
-            'proper-name' => undef, # CTO
-            'proper-email' => '<cto@company.xx>',
-	    'aliases' => [
-                { 'commit-name' => { }, 'commit-email' => { }, },
-            ]
-        },
-        {
-            'proper-name' => 'Some Dude',
-            'proper-email' => '<some@dude.xx>',
-	    'aliases' => [
-		{ 'commit-name' => 'nick1', 'commit-email' => '<bugs@company.xx>', },
-            ]
-        },
-    ],
+$mailmap->add(
+    'proper-email' => '<other@author.xx>',
+    'proper-name' => 'Other Author',
+    'commit-email' => '<bugs@company.xx>',
+    'commit-name' => 'nick2',
 );
-my $mailmap_file_contents =
+$mailmap->add(
+    'proper-email' => '<other@author.xx>',
+    'proper-name' => 'Other Author',
+    'commit-email' => '<nick2@company.xx>',
+);
+push @{$expected_mailmap{'committers'}}, {
+    'proper-email' => '<other@author.xx>',
+    'proper-name' => 'Other Author',
+    'aliases' => [ {
+        'commit-email' => '<bugs@company.xx>',
+        'commit-name' => 'nick2',
+    }, {
+        'commit-email' => '<nick2@company.xx>',
+    }, ],
+};
+is_deeply($mailmap, \%expected_mailmap, 'Object has three committers, one has two emails.');
+
+$mailmap->add(
+    'proper-email' => '<santa.claus@northpole.xx>',
+    'proper-name' => 'Santa Claus',
+    'commit-email' => '<me@company.xx>',
+);
+push @{$expected_mailmap{'committers'}}, {
+    'proper-email' => '<santa.claus@northpole.xx>',
+    'proper-name' => 'Santa Claus',
+    'aliases' => [ {
+        'commit-email' => '<me@company.xx>',
+    }, ],
+};
+is_deeply($mailmap, \%expected_mailmap, 'Object has four committers, one has two emails.');
+
+write
+my $expected_mailmap_file =
 '<cto@company.xx>                       <cto@coompany.xx>
 Some Dude <some@dude.xx>         nick1 <bugs@company.xx>
 Other Author <other@author.xx>   nick2 <bugs@company.xx>
