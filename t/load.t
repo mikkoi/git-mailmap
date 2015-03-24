@@ -1,23 +1,26 @@
 #!perl -T
 use 5.006;
 use strict;
-use warnings FATAL => 'all';
-use Test::More;
+use warnings;
+use Test::Most;
+die_on_fail;
 
 require Git::Mailmap;
 
-plan tests => 4;
-
 BEGIN {
 	use_ok('Git::Mailmap') || print "Bail out!\n";
-	can_ok('Git::Mailmap', '');
-	can_ok('Git::Mailmap', 'ironmq');
-	can_ok('Git::Mailmap', 'ironworker');
+	can_ok('Git::Mailmap', 'new');
+	can_ok('Git::Mailmap', 'add');
+	can_ok('Git::Mailmap', 'remove');
+	can_ok('Git::Mailmap', 'write');
+	can_ok('Git::Mailmap', 'read');
 }
 
 #use Log::Any::Adapter ('Stderr'); # Activate to get all log messages.
 
 diag("Testing Git::Mailmap $Git::Mailmap::VERSION, Perl $], $^X");
+
+done_testing();
 
 __END__
 read_file(filename => '')

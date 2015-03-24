@@ -70,16 +70,26 @@ push @{$expected_mailmap{'committers'}}, {
 };
 is_deeply($mailmap, \%expected_mailmap, 'Object has four committers, one has two emails.');
 
-my $mailmap_file = $maipmap->write();
-is :
+my $mailmap_file = $mailmap->to_string();
+## no critic (ValuesAndExpressions/ProhibitImplicitNewlines)
 my $expected_mailmap_file =
-'<cto@company.xx>                       <cto@coompany.xx>
-Some Dude <some@dude.xx>         nick1 <bugs@company.xx>
-Other Author <other@author.xx>   nick2 <bugs@company.xx>
-Other Author <other@author.xx>         <nick2@company.xx>
+'<cto@company.xx> <cto@company.xx>
+Some Dude <some@dude.xx> nick1 <bugs@company.xx>
+Other Author <other@author.xx> nick2 <bugs@company.xx>
+Other Author <other@author.xx> <nick2@company.xx>
 Santa Claus <santa.claus@northpole.xx> <me@company.xx>
 ';
-# $mailmap->read();
+is( $mailmap_file, $expected_mailmap_file, 'Printed out exactly as expected.' );
+
+# This is from Git git-check-mailmap manual:
+# http://man7.org/linux/man-pages/man1/git-check-mailmap.1.html
+# my $expected_mailmap_file =
+# '<cto@company.xx>                       <cto@coompany.xx>
+# Some Dude <some@dude.xx>         nick1 <bugs@company.xx>
+# Other Author <other@author.xx>   nick2 <bugs@company.xx>
+# Other Author <other@author.xx>         <nick2@company.xx>
+# Santa Claus <santa.claus@northpole.xx> <me@company.xx>
+# ';
 
 done_testing();
 
