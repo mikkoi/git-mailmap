@@ -49,7 +49,6 @@ The Git::Mailmap package require the following packages (in addition to normal P
 =cut
 
 use Log::Any qw{$log};
-# use File::Spec qw{read_file};
 use Hash::Util 0.06 qw{lock_keys lock_keys_plus unlock_keys};
 use Carp::Assert;
 use Carp::Assert::More;
@@ -60,6 +59,7 @@ use Readonly;
 # CONSTANTS
 Readonly::Scalar my $EMPTY_STRING => q{};
 Readonly::Scalar my $LF => qq{\n};
+Readonly::Scalar my $EMAIL_ADDRESS_REGEXP => q{<[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+.>}; ## no critic (ValuesAndExpressions::RequireInterpolationOfMetachars)
 
 =head1 SUBROUTINES/METHODS
 
@@ -264,9 +264,7 @@ sub remove { ## no critic (Subroutines/ProhibitExcessComplexity)
 
 =head2 from_string
 
-Read from file or a string. If you give the parameter I<filename>, 
-the mailmap will be from_string directly from file. If you give a string as parameter,
-this method will from_string the string and treat it as a file.
+Read the committers from a string.
 
 =over 8
 
@@ -274,9 +272,7 @@ this method will from_string the string and treat it as a file.
 
 =over 8
 
-=item I<filename>, not mandatory. Use either this or I<contents>.
-
-=item I<contents>, not mandatory.
+=item I<mailmap>, mandatory. This is the mailmap file as a string.
 
 =back
 
@@ -290,47 +286,70 @@ sub from_string {
     my $self = shift;
     my %params = validate(
         @_, {
-            'filename' => { type => SCALAR, optional => 1, },
-            'contents' => { type => SCALAR, optional => 1, },
+            'mailmap' => { type => SCALAR, },
         }
     );
     $log->tracef('Entering from_string(%s)', \%params);
-    assert_nonblank( $params{'proper-email'}, 'Parameter \'proper-email\' is a non-blank string.' );
-    my $committer;
-    foreach my $for_committer (@{$self->{'committers'}}) {
-        if($for_committer->{'proper-email'} eq $params{'proper-email'}) {
-            $for_committer->{'proper-name'} = $params{'proper-name'} if($params{'proper-name'});
-            assert_listref($for_committer->{'aliases'}, 'Item \'aliases\' exists.');
-            my $aliases = $for_committer->{'aliases'};
-            my $alias;
-            foreach my $for_alias (@{$aliases}) {
-                if($for_alias->{'commit-email'} eq $params{'commit-email'}) {
-                    $for_alias->{'commit-name'} = $params{'commit-name'};
-                    $for_alias = $for_alias;
-                    last;
-                }
+    assert_defined( $params{'mailmap'}, 'Parameter \'mailmap\' is a defined string.' );
+    foreach my $row (split qr/\n/msx, $params{'mailmap'}) {
+        $log->debug('from_string: reading row:\'%s\'.', $row);
+        if($row !~ /^[[:space:]]*\#/msx) { # Skip comment rows.
+            my ($proper_name, $proper_email, $commit_name, $commit_email)
+                = $row =~ /^(.*)($EMAIL_ADDRESS_REGEXP)(.+)($EMAIL_ADDRESS_REGEXP)[[:space:]]*$/msx;
+            # Remove beginning and end whitespace.
+            # ($proper_name) = $proper_name =~ /^[[:space:]]*(.*)[[:space:]]*$/msx;
+            $proper_name =~ s/^\s+|\s+$//sxmg;
+            # ($commit_name) = $commit_name =~ /^[[:space:]]*(.*)[[:space:]]*$/msx;
+            $commit_name =~ s/^\s+|\s+$//sxmg;
+            $log->debugf('clean_mailmap_file(parsing):proper_name=\'%s\', proper_email=\'%s\', commit_name=\'%s\', commit_email=\'%s\'.', $proper_name, $proper_email, $commit_name, $commit_email);
+            my %add_params = ( 'proper-email' => $proper_email );
+            if( length $proper_name > 0 ) {
+                $add_params{'proper-name'} = $proper_name;
             }
-            if(! defined $alias) {
-                $alias = { 'commit-email' => $params{'commit-email'} };
-                $alias->{'commit-name'} = $params{'commit-name'} if($params{'commit-name'});
-                push @{$aliases}, $alias;
+            if( length $commit_email > 0) {
+                $add_params{'commit-email'} = $commit_email;
             }
-            $committer = $for_committer;
-            last;
+            if( length $commit_name > 0) {
+                $add_params{'commit-name'} = $commit_name;
+            }
+            $self->add(%add_params);
         }
     }
-    if(! defined $committer) {
-        $committer = { 'proper-email' => $params{'proper-email'} };
-        $committer->{'proper-name'} = $params{'proper-name'} if($params{'proper-name'});
-        $committer->{'aliases'} = [ ];
-        my $alias;
-        if($params{'commit-email'}) {
-            $alias = { 'commit-email' => $params{'commit-email'} };
-            $alias->{'commit-name'} = $params{'commit-name'} if($params{'commit-name'});
-            push @{$committer->{'aliases'}}, $alias;
-        }
-        push @{$self->{'committers'}}, $committer;
-    }
+    # my $committer;
+    # foreach my $for_committer (@{$self->{'committers'}}) {
+    #     if($for_committer->{'proper-email'} eq $params{'proper-email'}) {
+    #         $for_committer->{'proper-name'} = $params{'proper-name'} if($params{'proper-name'});
+    #         assert_listref($for_committer->{'aliases'}, 'Item \'aliases\' exists.');
+    #         my $aliases = $for_committer->{'aliases'};
+    #         my $alias;
+    #         foreach my $for_alias (@{$aliases}) {
+    #             if($for_alias->{'commit-email'} eq $params{'commit-email'}) {
+    #                 $for_alias->{'commit-name'} = $params{'commit-name'};
+    #                 $for_alias = $for_alias;
+    #                 last;
+    #             }
+    #         }
+    #         if(! defined $alias) {
+    #             $alias = { 'commit-email' => $params{'commit-email'} };
+    #             $alias->{'commit-name'} = $params{'commit-name'} if($params{'commit-name'});
+    #             push @{$aliases}, $alias;
+    #         }
+    #         $committer = $for_committer;
+    #         last;
+    #     }
+    # }
+    # if(! defined $committer) {
+    #     $committer = { 'proper-email' => $params{'proper-email'} };
+    #     $committer->{'proper-name'} = $params{'proper-name'} if($params{'proper-name'});
+    #     $committer->{'aliases'} = [ ];
+    #     my $alias;
+    #     if($params{'commit-email'}) {
+    #         $alias = { 'commit-email' => $params{'commit-email'} };
+    #         $alias->{'commit-name'} = $params{'commit-name'} if($params{'commit-name'});
+    #         push @{$committer->{'aliases'}}, $alias;
+    #     }
+    #     push @{$self->{'committers'}}, $committer;
+    # }
     $log->tracef('Exiting from_string: %s', $self);
     return;
 }
@@ -431,14 +450,15 @@ sub clean_mailmap_file {
     );
     $log->tracef('Entering clean_mailmap_file(%s)', \%params);
     my $file = $EMPTY_STRING;
-    my $offset_for_commit_email = 70;
+    my $offset_for_commit_email = 70; # Just a hat-value to test.
     foreach my $row (split qr/\n/msx, $params{'mailmap'}) {
         if($row =~ /^[[:space:]]*\#/msx) { # Skip comment rows.
             $file .= $row . $LF;
         }
         else {
             my ($proper_name, $proper_email, $commit_name, $commit_email)
-                = $row =~ /^[[:space:]]*([[:graph:]]*)(<[[:graph:]]+@[[:graph:]]+>)([[:graph:]]*)(<[[:graph:]]+@[[:graph:]]+>)[[:space:]]*$/msx;
+                = $row =~ /^(.*)($EMAIL_ADDRESS_REGEXP)(.+)($EMAIL_ADDRESS_REGEXP)[[:space:]]*$/msx;
+            # $proper_name =~ 3 Remove whitespace from the beginning.
             $log->debugf('clean_mailmap_file(parsing):proper_name=\'%s\', proper_email=\'%s\', commit_name=\'%s\', commit_email=\'%s\'.', $proper_name, $proper_email, $commit_name, $commit_email);
 
         }

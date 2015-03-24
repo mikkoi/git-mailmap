@@ -4,7 +4,7 @@ use strict; use warnings;
 use Test::Most;
 die_on_fail;
 
-use Log::Any::Adapter ('Stderr'); # Activate to get all log messages.
+# use Log::Any::Adapter ('Stderr'); # Activate to get all log messages.
 #diag("Testing Git::Mailmap $Git::Mailmap::VERSION, Perl $], $^X");
 
 require Git::Mailmap;
@@ -13,8 +13,16 @@ my $mailmap = Git::Mailmap->new();
 my %expected_mailmap = ( 'committers' => [ ] );
 is_deeply($mailmap, \%expected_mailmap, 'Object internal data is empty.');
 
-$mailmap->add('proper-email' => '<cto@company.xx>');
-push @{$expected_mailmap{'committers'}}, { 'proper-email' => '<cto@company.xx>', 'aliases' => [ ], };
+$mailmap->add(
+    'proper-email' => '<cto@company.xx>',
+    'commit-email' => '<cto@coompany.xx>',
+);
+push @{$expected_mailmap{'committers'}}, {
+    'proper-email' => '<cto@company.xx>',
+    'aliases' => [ {
+        'commit-email' => '<cto@coompany.xx>',
+    } ],
+};
 is_deeply($mailmap, \%expected_mailmap, 'Object has one committer.');
 
 $mailmap->add(
@@ -73,7 +81,7 @@ is_deeply($mailmap, \%expected_mailmap, 'Object has four committers, one has two
 my $mailmap_file = $mailmap->to_string();
 ## no critic (ValuesAndExpressions/ProhibitImplicitNewlines)
 my $expected_mailmap_file =
-'<cto@company.xx> <cto@company.xx>
+'<cto@company.xx> <cto@coompany.xx>
 Some Dude <some@dude.xx> nick1 <bugs@company.xx>
 Other Author <other@author.xx> nick2 <bugs@company.xx>
 Other Author <other@author.xx> <nick2@company.xx>
