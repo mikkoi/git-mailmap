@@ -5,8 +5,7 @@ use warnings;
 use Test::Most;
 die_on_fail;
 
-# use Log::Any::Adapter ('Stderr'); # Activate to get all log messages.
-#diag("Testing Git::Mailmap $Git::Mailmap::VERSION, Perl $], $^X");
+#  use Log::Any::Adapter ('Stderr'); # Activate to get all log messages.
 
 require Git::Mailmap;
 my $mailmap = Git::Mailmap->new();
@@ -93,6 +92,7 @@ push @{ $expected_mailmap{'committers'} },
 is_deeply( $mailmap, \%expected_mailmap, 'Object has four committers, one has two emails.' );
 
 my $mailmap_file = $mailmap->to_string();
+
 ## no critic (ValuesAndExpressions/ProhibitImplicitNewlines)
 my $expected_mailmap_file = '<cto@company.xx> <cto@coompany.xx>
 Some Dude <some@dude.xx> nick1 <bugs@company.xx>
@@ -111,6 +111,33 @@ is( $mailmap_file, $expected_mailmap_file, 'Printed out exactly as expected.' );
 # Other Author <other@author.xx>         <nick2@company.xx>
 # Santa Claus <santa.claus@northpole.xx> <me@company.xx>
 # ';
+
+my $verified = $mailmap->search(    'proper-email' => '<santa.claus@northpole.xx>');
+is( $verified, 1, 'Proper email verified.' );
+$verified = $mailmap->search(    'proper-email' => '<Santa.Claus@northpole.xx>');
+is( $verified, 0, 'Proper email verified (not found).' );
+$verified = $mailmap->search(    'commit-email' => '<me@company.xx>');
+is( $verified, 1, 'Commit email verified.' );
+$verified = $mailmap->search(    'commit-email' => '<Me@company.xx>');
+is( $verified, 0, 'Commit email verified (not found).' );
+$verified = $mailmap->search(    'proper-email' => '<cto@company.xx>');
+is( $verified, 1, 'Proper email verified.' );
+$verified = $mailmap->search(    'proper-name' => 'Some Dude', 'proper-email' => '<some@dude.xx>');
+is( $verified, 1, 'Proper email verified.' );
+$verified = $mailmap->search(    'proper-name' => 'SOME Dude', 'proper-email' => '<some@dude.xx>');
+is( $verified, 0, 'Proper email verified (not found).' );
+
+$verified = $mailmap->search(
+    'proper-name' => 'Some Dude With Wrong Name',
+    'proper-email' => '<some@dude.xx>',
+    );
+is( $verified, 0, 'Proper email verified. No match when wrong name');
+$verified = $mailmap->search(
+    # No proper-name this time!
+    'proper-email' => '<some@dude.xx>',
+    );
+is( $verified, 1, 'Proper email verified. Match when no name is given.' );
+
 
 done_testing();
 
