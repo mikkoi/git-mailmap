@@ -4,7 +4,6 @@ use strict;
 use warnings;
 use Test::Most;
 
-
 #  use Log::Any::Adapter ('Stderr'); # Activate to get all log messages.
 
 require Git::Mailmap;
@@ -72,7 +71,8 @@ push @{ $expected_mailmap{'committers'} },
         },
     ],
   };
-is_deeply( $mailmap, \%expected_mailmap, 'Object has three committers, one has two emails.' );
+is_deeply( $mailmap, \%expected_mailmap,
+    'Object has three committers, one has two emails.' );
 
 $mailmap->add(
     'proper-email' => '<santa.claus@northpole.xx>',
@@ -89,7 +89,8 @@ push @{ $expected_mailmap{'committers'} },
         },
     ],
   };
-is_deeply( $mailmap, \%expected_mailmap, 'Object has four committers, one has two emails.' );
+is_deeply( $mailmap, \%expected_mailmap,
+    'Object has four committers, one has two emails.' );
 
 my $mailmap_file = $mailmap->to_string();
 
@@ -111,7 +112,6 @@ is( $mailmap_file, $expected_mailmap_file, 'Printed out exactly as expected.' );
 # Other Author <other@author.xx>         <nick2@company.xx>
 # Santa Claus <santa.claus@northpole.xx> <me@company.xx>
 # ';
-
 
 done_testing();
 

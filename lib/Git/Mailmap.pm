@@ -56,6 +56,16 @@ Package Git::Mailmap is currently being developed so changes in the API and func
     my @mapped_to = $mailmap->map('email' => '<cto@coompany.xx>');
     # mapped_to => is_deeply (undef, '<cto@company.xx>')
 
+=head1 DESCRIPTION
+
+Git::Mailmap is a Perl implementation of the mailmap functionality in Git.
+It allows to create a mailmap by adding a mapped address at a time, or
+removing unwanted ones. You can also read or write the mailmap file as
+a string.
+
+For mailmap, please see
+L<http://git-scm.com/docs/git-shortlog#_mapping_authors|http://git-scm.com/docs/git-shortlog#_mapping_authors>
+
 =head1 REQUIREMENTS
 
 The Git::Mailmap package requires the following packages (in addition to normal Perl core packages):
@@ -90,13 +100,12 @@ Readonly::Scalar my $EMPTY_STRING => q{};
 Readonly::Scalar my $LF           => qq{\n};
 Readonly::Scalar my $EMAIL_ADDRESS_REGEXP =>
   q{<[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+.>};    ## no critic (ValuesAndExpressions::RequireInterpolationOfMetachars)
-Readonly::Hash   my %VALIDATE_PARAM_EMAIL => ('regex' => qr/$EMAIL_ADDRESS_REGEXP/msx);
-Readonly::Hash   my %VALIDATE_PARAM_NONBLANK => ('regex' => qr/\S+/msx);
-Readonly::Scalar my $PROPER_NAME => q{proper-name};
-Readonly::Scalar my $PROPER_EMAIL => q{proper-email};
-Readonly::Scalar my $COMMIT_NAME => q{commit-name};
-Readonly::Scalar my $COMMIT_EMAIL => q{commit-email};
-
+Readonly::Hash my %VALIDATE_PARAM_EMAIL    => ( 'regex' => qr/$EMAIL_ADDRESS_REGEXP/msx );
+Readonly::Hash my %VALIDATE_PARAM_NONBLANK => ( 'regex' => qr/\S+/msx );
+Readonly::Scalar my $PROPER_NAME           => q{proper-name};
+Readonly::Scalar my $PROPER_EMAIL          => q{proper-email};
+Readonly::Scalar my $COMMIT_NAME           => q{commit-name};
+Readonly::Scalar my $COMMIT_EMAIL          => q{commit-email};
 
 =head1 SUBROUTINES/METHODS
 
@@ -157,11 +166,11 @@ sub map {
         @_,
         {
             'email' => { 'type' => SCALAR, %VALIDATE_PARAM_NONBLANK, },
-            'name' => { 'type' => SCALAR, 'optional' => 1, %VALIDATE_PARAM_NONBLANK, },
+            'name'  => { 'type' => SCALAR, 'optional' => 1, %VALIDATE_PARAM_NONBLANK, },
         }
     );
     $log->tracef( 'Entering map(%s)', \%params );
-    my @mapped_to = (undef, undef);
+    my @mapped_to = ( undef, undef );
     my $committer;
     foreach my $for_committer ( @{ $self->{'committers'} } ) {
         if ( $for_committer->{'proper-email'} eq $params{'email'} ) {
@@ -174,26 +183,28 @@ sub map {
             my $alias;
             foreach my $for_alias ( @{$aliases} ) {
                 if ( $for_alias->{'commit-email'} eq $params{'email'} ) {
-                    if( !defined $params{'name'} ) {
+                    if ( !defined $params{'name'} ) {
                         $committer = $for_committer;
                         last;
                     }
-                    elsif( defined $params{'name'}
-                            && $params{'name'} eq $for_alias->{'commit-name'}) {
+                    elsif ( defined $params{'name'}
+                        && $params{'name'} eq $for_alias->{'commit-name'} )
+                    {
                         $committer = $for_committer;
                         last;
                     }
+
                     # If name parameter is defined and not matches here,
                     # try the next alias!
                 }
             }
-            if( $committer ) {
+            if ($committer) {
                 last;
             }
         }
     }
     if ( defined $committer ) {
-        @mapped_to = ($committer->{'proper-name'}, $committer->{'proper-email'});
+        @mapped_to = ( $committer->{'proper-name'}, $committer->{'proper-email'} );
     }
     $log->tracef( 'Exiting map: %s', \@mapped_to );
     return @mapped_to;
@@ -320,7 +331,8 @@ sub verify {    ## no critic (Subroutines/ProhibitExcessComplexity)
             'proper-name'  => { type => SCALAR, optional => 1, },
             'commit-email' => { type => SCALAR, optional => 1, },
             'commit-name'  => { type => SCALAR, optional => 1, },
-            # 'match-when-no-name' => { 
+
+            # 'match-when-no-name' => {
             #     type => BOOLEAN, optional => 1, default => 1, },
             # # If mailmap has no name, but caller has name, match if param is true.
         }
@@ -328,26 +340,34 @@ sub verify {    ## no critic (Subroutines/ProhibitExcessComplexity)
     ## no critic (ControlStructures::ProhibitPostfixControls)
     $log->tracef( 'Entering verify(%s)', \%params );
     my $committers = $self->{'committers'};
-    my %found = ($PROPER_EMAIL => -1, $PROPER_NAME => -1,
-        $COMMIT_EMAIL => -1, $COMMIT_NAME => -1, );
-    foreach ($PROPER_EMAIL, $PROPER_NAME, $COMMIT_EMAIL, $COMMIT_NAME) {
-        $found{$_} = 0 if(defined $params{$_});
+    my %found      = (
+        $PROPER_EMAIL => -1,
+        $PROPER_NAME  => -1,
+        $COMMIT_EMAIL => -1,
+        $COMMIT_NAME  => -1,
+    );
+    foreach ( $PROPER_EMAIL, $PROPER_NAME, $COMMIT_EMAIL, $COMMIT_NAME ) {
+        $found{$_} = 0 if ( defined $params{$_} );
     }
-    foreach my $committer (@{ $committers }) {
-        foreach ($PROPER_EMAIL, $PROPER_NAME, $COMMIT_EMAIL, $COMMIT_NAME) {
-            $found{$_} = 1 if(defined $committer->{$_} && defined $params{$_}
-                && $committer->{$_} eq $params{$_});
+    foreach my $committer ( @{$committers} ) {
+        foreach ( $PROPER_EMAIL, $PROPER_NAME, $COMMIT_EMAIL, $COMMIT_NAME ) {
+            $found{$_} = 1 if ( defined $committer->{$_}
+                && defined $params{$_}
+                && $committer->{$_} eq $params{$_} );
         }
         my $aliases = $committer->{'aliases'};
-        foreach my $alias (@{$aliases}) {
-            foreach ($PROPER_EMAIL, $PROPER_NAME, $COMMIT_EMAIL, $COMMIT_NAME) {
-                $found{$_} = 1 if(defined $alias->{$_} && defined $params{$_}
-                    && $alias->{$_} eq $params{$_});
+        foreach my $alias ( @{$aliases} ) {
+            foreach ( $PROPER_EMAIL, $PROPER_NAME, $COMMIT_EMAIL, $COMMIT_NAME ) {
+                $found{$_} = 1 if ( defined $alias->{$_}
+                    && defined $params{$_}
+                    && $alias->{$_} eq $params{$_} );
             }
         }
     }
-    my $match = ($found{$PROPER_EMAIL} != 0 && $found{$PROPER_NAME} != 0
-            && $found{$COMMIT_EMAIL} != 0 && $found{$COMMIT_NAME} != 0) ? 1 : 0;
+    my $match =
+      ( $found{$PROPER_EMAIL} != 0 && $found{$PROPER_NAME} != 0 && $found{$COMMIT_EMAIL} != 0 && $found{$COMMIT_NAME} != 0 )
+      ? 1
+      : 0;
     $log->tracef( 'Exiting verify: %s', $match );
     return $match;
 }
@@ -415,7 +435,7 @@ sub remove {    ## no critic (Subroutines/ProhibitExcessComplexity)
     }
     else {
         my $committers = $self->{'committers'};
-        for ( my $i = 0 ; $i < scalar @{ $committers } ; ) {    ## no critic (ControlStructures::ProhibitCStyleForLoops)
+        for ( my $i = 0 ; $i < scalar @{$committers} ; ) {    ## no critic (ControlStructures::ProhibitCStyleForLoops)
             my $for_committer = $committers->[$i];
             if ( $for_committer->{'proper-email'} eq $params{'proper-email'}
                 || !defined $params{'commit-email'} )
@@ -423,7 +443,7 @@ sub remove {    ## no critic (Subroutines/ProhibitExcessComplexity)
                 if ( !defined $params{'commit-email'} ) {
 
                     # Cut away the whole list entry.
-                    splice @{ $committers }, $i, 1;
+                    splice @{$committers}, $i, 1;
                 }
                 else {
                     # Don't cut away the whole entry, just the matching aliases.
@@ -432,7 +452,8 @@ sub remove {    ## no critic (Subroutines/ProhibitExcessComplexity)
                     my $alias;
                     for ( my $j = 0 ; $j < scalar @{$aliases} ; ) {    ## no critic (ControlStructures::ProhibitCStyleForLoops)
                         my $for_alias = $aliases->[$j];
-                        if ( $for_alias->{'commit-email'} eq $params{'commit-email'} ) { ## no critic (ControlStructures::ProhibitDeepNests)
+                        if ( $for_alias->{'commit-email'} eq $params{'commit-email'} )
+                        {                                              ## no critic (ControlStructures::ProhibitDeepNests)
                             splice @{$aliases}, $j, 1;
                             last;
                         }
@@ -484,18 +505,18 @@ sub from_string {
     foreach my $row ( split qr/\n/msx, $params{'mailmap'} ) {
         $log->debug( 'from_string: reading row:\'%s\'.', $row );
         if ( $row !~ /^[[:space:]]*\#/msx ) {    # Skip comment rows.
-            # Comments can also be at the end of the row. Remove them:
+                                                 # Comments can also be at the end of the row. Remove them:
             $row =~ s/(\#.*)$//msx;
-            my ($proper_name, $proper_email, $commit_name, $commit_email);
+            my ( $proper_name, $proper_email, $commit_name, $commit_email );
+
             # The special case of 'Proper Name <commit@email.xx>'
-            if($row =~ m/^([^<>]*)($EMAIL_ADDRESS_REGEXP)[[:space:]]*$/msx) {
-                ($proper_name, $proper_email) =
-                    $row =~ /^(.*)($EMAIL_ADDRESS_REGEXP)[[:space:]]*$/msx;
-                ($commit_name, $commit_email) = ($EMPTY_STRING, $EMPTY_STRING);
+            if ( $row =~ m/^([^<>]*)($EMAIL_ADDRESS_REGEXP)[[:space:]]*$/msx ) {
+                ( $proper_name, $proper_email ) = $row =~ /^(.*)($EMAIL_ADDRESS_REGEXP)[[:space:]]*$/msx;
+                ( $commit_name, $commit_email ) = ( $EMPTY_STRING, $EMPTY_STRING );
             }
-            elsif( $row =~ /^(.*)($EMAIL_ADDRESS_REGEXP)(.+)($EMAIL_ADDRESS_REGEXP)[[:space:]]*$/msx ) {
-                ($proper_name, $proper_email, $commit_name, $commit_email) =
-                    $row =~ /^(.*)($EMAIL_ADDRESS_REGEXP)(.+)($EMAIL_ADDRESS_REGEXP)[[:space:]]*$/msx;
+            elsif ( $row =~ /^(.*)($EMAIL_ADDRESS_REGEXP)(.+)($EMAIL_ADDRESS_REGEXP)[[:space:]]*$/msx ) {
+                ( $proper_name, $proper_email, $commit_name, $commit_email ) =
+                  $row =~ /^(.*)($EMAIL_ADDRESS_REGEXP)(.+)($EMAIL_ADDRESS_REGEXP)[[:space:]]*$/msx;
             }
             else {
                 carp "Can not parse the following row: '$row'";
@@ -585,86 +606,6 @@ sub to_string {
         }
     }
     $log->tracef( 'Exiting to_string: %s', $file );
-    return $file;
-}
-
-=head2 clean_mailmap_file
-
-Arrange the parameter I<mailmap> (the mailmap file) into an order where
-the last part of the string (the alias/committer email address)
-is left justified. Return the arranged mailmap as string.
-
-This function is currently in development. Do not use!
-
-=over 8
-
-=item Parameters:
-
-=over 8
-
-=item mailmap, mandatory.
-
-=back
-
-=item Return: string.
-
-=back
-
-=cut
-
-sub clean_mailmap_file {
-    my $self   = shift;
-    my %params = validate(
-        @_,
-        {
-            'mailmap' => { type => SCALAR, },
-        }
-    );
-    $log->tracef( 'Entering clean_mailmap_file(%s)', \%params );
-    my $file                    = $EMPTY_STRING;
-    my $offset_for_commit_email = 70;              # Just a hat-value to test.
-    foreach my $row ( split qr/\n/msx, $params{'mailmap'} ) {
-        if ( $row =~ /^[[:space:]]*\#/msx ) {      # Skip comment rows.
-            $file .= $row . $LF;
-        }
-        else {
-            my ( $proper_name, $proper_email, $commit_name, $commit_email ) =
-              $row =~ /^(.*)($EMAIL_ADDRESS_REGEXP)(.+)($EMAIL_ADDRESS_REGEXP)[[:space:]]*$/msx;
-
-            # $proper_name =~ 3 Remove whitespace from the beginning.
-            $log->debugf(
-                'clean_mailmap_file(parsing):proper_name=\'%s\', proper_email=\'%s\', commit_name=\'%s\', commit_email=\'%s\'.',
-                $proper_name, $proper_email, $commit_name, $commit_email );
-
-        }
-    }
-
-    my $committers = $self->{'committers'};
-    foreach my $committer ( @{$committers} ) {
-        assert_nonblank( $committer->{'proper-email'}, 'Committer has nonblank item \'proper-email}\'.' );
-        my $proper_part = $EMPTY_STRING;
-        if ( defined $committer->{'proper-name'} ) {
-            $proper_part .= $committer->{'proper-name'} . q{ };
-        }
-        $proper_part .= $committer->{'proper-email'};
-        assert_listref( $committer->{'aliases'}, 'Item \'aliases\' exists.' );
-        my $aliases = $committer->{'aliases'};
-        if ( scalar @{$aliases} > 0 ) {
-            foreach my $alias ( @{$aliases} ) {
-                assert_nonblank( $alias->{'commit-email'}, 'Alias has nonblank item \'commit-email}\'.' );
-                my $alias_part = $EMPTY_STRING;
-                if ( defined $alias->{'commit-name'} ) {
-                    $alias_part .= $alias->{'commit-name'} . q{ };
-                }
-                $alias_part .= $alias->{'commit-email'};
-                $file .= $proper_part . q{ } . $alias_part . "\n";
-            }
-        }
-        else {
-            $file .= $proper_part . q{ } . $proper_part . "\n";
-        }
-    }
-    $log->tracef( 'Exiting clean_mailmap_file: %s', $file );
     return $file;
 }
 
