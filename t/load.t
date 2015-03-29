@@ -17,7 +17,5 @@ BEGIN {
     can_ok( 'Git::Mailmap', 'from_string' );
 }
 
-diag("Testing Git::Mailmap $Git::Mailmap::VERSION, Perl $], $^X");
-
 done_testing();
 
