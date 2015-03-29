@@ -3,7 +3,7 @@ use 5.006;
 use strict;
 use warnings;
 use Test::Most;
-die_on_fail;
+
 
 # use Log::Any::Adapter ('Stderr'); # Activate to get all log messages.
 
