@@ -12,11 +12,11 @@ BEGIN {
     can_ok( 'Git::Mailmap', 'new' );
     can_ok( 'Git::Mailmap', 'add' );
     can_ok( 'Git::Mailmap', 'remove' );
+    can_ok( 'Git::Mailmap', 'map' );
+    can_ok( 'Git::Mailmap', 'verify' );
     can_ok( 'Git::Mailmap', 'to_string' );
     can_ok( 'Git::Mailmap', 'from_string' );
 }
-
-#use Log::Any::Adapter ('Stderr'); # Activate to get all log messages.
 
 diag("Testing Git::Mailmap $Git::Mailmap::VERSION, Perl $], $^X");
 

@@ -112,32 +112,6 @@ is( $mailmap_file, $expected_mailmap_file, 'Printed out exactly as expected.' );
 # Santa Claus <santa.claus@northpole.xx> <me@company.xx>
 # ';
 
-my $verified = $mailmap->search(    'proper-email' => '<santa.claus@northpole.xx>');
-is( $verified, 1, 'Proper email verified.' );
-$verified = $mailmap->search(    'proper-email' => '<Santa.Claus@northpole.xx>');
-is( $verified, 0, 'Proper email verified (not found).' );
-$verified = $mailmap->search(    'commit-email' => '<me@company.xx>');
-is( $verified, 1, 'Commit email verified.' );
-$verified = $mailmap->search(    'commit-email' => '<Me@company.xx>');
-is( $verified, 0, 'Commit email verified (not found).' );
-$verified = $mailmap->search(    'proper-email' => '<cto@company.xx>');
-is( $verified, 1, 'Proper email verified.' );
-$verified = $mailmap->search(    'proper-name' => 'Some Dude', 'proper-email' => '<some@dude.xx>');
-is( $verified, 1, 'Proper email verified.' );
-$verified = $mailmap->search(    'proper-name' => 'SOME Dude', 'proper-email' => '<some@dude.xx>');
-is( $verified, 0, 'Proper email verified (not found).' );
-
-$verified = $mailmap->search(
-    'proper-name' => 'Some Dude With Wrong Name',
-    'proper-email' => '<some@dude.xx>',
-    );
-is( $verified, 0, 'Proper email verified. No match when wrong name');
-$verified = $mailmap->search(
-    # No proper-name this time!
-    'proper-email' => '<some@dude.xx>',
-    );
-is( $verified, 1, 'Proper email verified. Match when no name is given.' );
-
 
 done_testing();
 

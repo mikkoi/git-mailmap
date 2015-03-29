@@ -76,10 +76,13 @@ Readonly::Scalar my $EMPTY_STRING => q{};
 Readonly::Scalar my $LF           => qq{\n};
 Readonly::Scalar my $EMAIL_ADDRESS_REGEXP =>
   q{<[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+.>};    ## no critic (ValuesAndExpressions::RequireInterpolationOfMetachars)
+Readonly::Hash   my %VALIDATE_PARAM_EMAIL => ('regex' => qr/$EMAIL_ADDRESS_REGEXP/);
+Readonly::Hash   my %VALIDATE_PARAM_NONBLANK => ('regex' => qr/\S+/);
 Readonly::Scalar my $PROPER_NAME => q{proper-name};
 Readonly::Scalar my $PROPER_EMAIL => q{proper-email};
 Readonly::Scalar my $COMMIT_NAME => q{commit-name};
 Readonly::Scalar my $COMMIT_EMAIL => q{commit-email};
+
 
 =head1 SUBROUTINES/METHODS
 
@@ -109,7 +112,11 @@ sub new {
 
 =head2 map
 
-Map the committer name/email to proper name/email. Not yet fully functional.
+Map the committer name and email to proper name/email. The email can be
+proper-email or committer-email (alias). Email is mandatory parameter.
+If name is given aswell, then looks for both. If only email, then
+the mapping is done to the first matching email address,
+regardless of the name.
 
 =over 8
 
@@ -117,17 +124,13 @@ Map the committer name/email to proper name/email. Not yet fully functional.
 
 =over 8
 
-=item I<proper-email>, not mandatory
+=item I<name>, not mandatory.
 
-=item I<proper-name>, not implemented
-
-=item I<commit-email>, not mandatory
-
-=item I<commit-name>, not implemented
+=item I<email>, mandatory.
 
 =back
 
-=item Return: [NONE]
+=item Return: LIST(proper-name, proper-email). If no name is mapped, then undef. If no email address is mapped, then both are undef.
 
 =back
 
@@ -135,64 +138,51 @@ Map the committer name/email to proper name/email. Not yet fully functional.
 
 ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 sub map {
-    # TODO map
     my $self   = shift;
     my %params = validate(
         @_,
         {
-            'email' => { type => SCALAR, },
-            'name'  => { type => SCALAR, optional => 1, },
+            'email' => { 'type' => SCALAR, %VALIDATE_PARAM_NONBLANK, },
+            'name' => { 'type' => SCALAR, 'optional' => 1, %VALIDATE_PARAM_NONBLANK, },
         }
     );
     $log->tracef( 'Entering map(%s)', \%params );
-    assert_nonblank( $params{'email'}, 'Parameter \'email\' is a non-blank string.' );
+    my @mapped_to = (undef, undef);
     my $committer;
-    # my $mapped_to_email;
-    # my $mapped_to_name;
     foreach my $for_committer ( @{ $self->{'committers'} } ) {
         if ( $for_committer->{'proper-email'} eq $params{'email'} ) {
-            if ( $params{'proper-name'} ) {
-                $for_committer->{'proper-name'} = $params{'name'};
-            }
+            $committer = $for_committer;
+            last;
+        }
+        else {
             assert_listref( $for_committer->{'aliases'}, 'Item \'aliases\' exists.' );
             my $aliases = $for_committer->{'aliases'};
             my $alias;
             foreach my $for_alias ( @{$aliases} ) {
-                if ( $for_alias->{'commit-email'} eq $params{'commit-email'} ) {
-                    $for_alias->{'commit-name'} = $params{'commit-name'};
-                    $for_alias = $for_alias;
-                    last;
+                if ( $for_alias->{'commit-email'} eq $params{'email'} ) {
+                    if( !defined $params{'name'} ) {
+                        $committer = $for_committer;
+                        last;
+                    }
+                    elsif( defined $params{'name'}
+                            && $params{'name'} eq $for_alias->{'commit-name'}) {
+                        $committer = $for_committer;
+                        last;
+                    }
+                    # If name parameter is defined and not matches here,
+                    # try the next alias!
                 }
             }
-            if ( !defined $alias ) {
-                $alias = { 'commit-email' => $params{'commit-email'} };
-                if ( $params{'commit-name'} ) {
-                    $alias->{'commit-name'} = $params{'commit-name'};
-                }
-                push @{$aliases}, $alias;
+            if( $committer ) {
+                last;
             }
-            $committer = $for_committer;
-            last;
         }
     }
-    if ( !defined $committer ) {
-        $committer = { 'proper-email' => $params{'proper-email'} };
-        if ( $params{'proper-name'} ) {
-            $committer->{'proper-name'} = $params{'proper-name'};
-        }
-        $committer->{'aliases'} = [];
-        my $alias;
-        if ( $params{'commit-email'} ) {
-            $alias = { 'commit-email' => $params{'commit-email'} };
-            if ( $params{'commit-name'} ) {
-                $alias->{'commit-name'} = $params{'commit-name'};
-            }
-            push @{ $committer->{'aliases'} }, $alias;
-        }
-        push @{ $self->{'committers'} }, $committer;
+    if ( defined $committer ) {
+        @mapped_to = ($committer->{'proper-name'}, $committer->{'proper-email'});
     }
-    $log->tracef( 'Exiting map: %s', $self );
-    return;
+    $log->tracef( 'Exiting map: %s', \@mapped_to );
+    return @mapped_to;
 }
 
 =head2 add
@@ -226,14 +216,13 @@ sub add {
     my %params = validate(
         @_,
         {
-            'proper-email' => { type => SCALAR, },
-            'proper-name'  => { type => SCALAR, optional => 1, depends => ['proper-email'], },
-            'commit-email' => { type => SCALAR, optional => 1, },
-            'commit-name'  => { type => SCALAR, optional => 1, depends => ['commit-email'], },
-        }    # TODO -emails check with regexp, are "<XX@XX>"
+            'proper-email' => { type => SCALAR, %VALIDATE_PARAM_NONBLANK, },
+            'proper-name'  => { type => SCALAR, optional => 1, %VALIDATE_PARAM_NONBLANK, depends => ['proper-email'], },
+            'commit-email' => { type => SCALAR, optional => 1, %VALIDATE_PARAM_NONBLANK, },
+            'commit-name'  => { type => SCALAR, optional => 1, %VALIDATE_PARAM_NONBLANK, depends => ['commit-email'], },
+        },
     );
     $log->tracef( 'Entering add(%s)', \%params );
-    assert_nonblank( $params{'proper-email'}, 'Parameter \'proper-email\' is a non-blank string.' );
     my $committer;
     foreach my $for_committer ( @{ $self->{'committers'} } ) {
         if ( $for_committer->{'proper-email'} eq $params{'proper-email'} ) {
@@ -281,7 +270,7 @@ sub add {
     return;
 }
 
-=head2 search
+=head2 verify
 
 Search for a given name and/or email.
 
@@ -308,7 +297,7 @@ don't set the *-name parameters!
 
 =cut
 
-sub search {    ## no critic (Subroutines/ProhibitExcessComplexity)
+sub verify {    ## no critic (Subroutines/ProhibitExcessComplexity)
     my $self   = shift;
     my %params = validate(
         @_,
@@ -323,7 +312,7 @@ sub search {    ## no critic (Subroutines/ProhibitExcessComplexity)
         }
     );
     ## no critic (ControlStructures::ProhibitPostfixControls)
-    $log->tracef( 'Entering search(%s)', \%params );
+    $log->tracef( 'Entering verify(%s)', \%params );
     my $committers = $self->{'committers'};
     my %found = ($PROPER_EMAIL => -1, $PROPER_NAME => -1,
         $COMMIT_EMAIL => -1, $COMMIT_NAME => -1, );
@@ -345,7 +334,7 @@ sub search {    ## no critic (Subroutines/ProhibitExcessComplexity)
     }
     my $match = ($found{$PROPER_EMAIL} != 0 && $found{$PROPER_NAME} != 0
             && $found{$COMMIT_EMAIL} != 0 && $found{$COMMIT_NAME} != 0) ? 1 : 0;
-    $log->tracef( 'Exiting search: %s', $match );
+    $log->tracef( 'Exiting verify: %s', $match );
     return $match;
 }
 
