@@ -180,7 +180,6 @@ sub map {
         else {
             assert_listref( $for_committer->{'aliases'}, 'Item \'aliases\' exists.' );
             my $aliases = $for_committer->{'aliases'};
-            my $alias;
             foreach my $for_alias ( @{$aliases} ) {
                 if ( $for_alias->{'commit-email'} eq $params{'email'} ) {
                     if ( !defined $params{'name'} ) {
@@ -449,7 +448,6 @@ sub remove {    ## no critic (Subroutines/ProhibitExcessComplexity)
                     # Don't cut away the whole entry, just the matching aliases.
                     assert_arrayref( $for_committer->{'aliases'}, 'Item \'aliases\' exists.' );
                     my $aliases = $for_committer->{'aliases'};
-                    my $alias;
                     for ( my $j = 0 ; $j < scalar @{$aliases} ; ) {    ## no critic (ControlStructures::ProhibitCStyleForLoops)
                         my $for_alias = $aliases->[$j];
                         if ( $for_alias->{'commit-email'} eq $params{'commit-email'} )

@@ -40,3 +40,6 @@ verbose  = 4
 exclude  = RegularExpressions::RequireExtendedFormatting
 exclude  = Modules::RequireVersionVar
 exclude  = Documentation
+exclude  = Subroutines::RequireArgUnpacking
+exclude  = Modules::RequireVersionVar
+
