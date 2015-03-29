@@ -35,12 +35,26 @@ Package Git::Mailmap is currently being developed so changes in the API and func
 =head1 SYNOPSIS
 
     require Git::Mailmap;
-    my $mailmap = Git::Mailmap->new();
-    $mailmap->from_string($map_as_string);
-    my $correct = $mailmap->verify(
-            'proper-email' => $proper_email,
-            'commit-email' => $commit_email
-            );
+
+    my $mailmap_file_as_string = '<cto@company.xx> <cto@coompany.xx>
+    Some Dude <some@dude.xx>         nick1 <bugs@company.xx>
+    Other Author <other@author.xx>   nick2 <bugs@company.xx>
+    ';
+
+    my $mailmap = Git::Mailmap->new(); # => isa 'Git::Mailmap2'
+    $mailmap->from_string($mailmap_file_as_string);
+    my $correct = $mailmap->verify( 'proper-email' => '<cto@company.xx>'); # => 1
+    my $fail = $mailmap->verify(
+            'proper-email' => '<cto@company.xx>',
+            'proper-name' => 'CTO'); # => 0
+    # Fail: no email address with that name!
+    my ($mapped_to_name, $mapped_to_email) = $mailmap->map(
+            'email' => '<bugs@company.xx>',
+            'name' => 'nick1');
+    # mapped_to_name => 'Some Dudeeed'
+    # mapped_to_email => '<some@dude.xx>'
+    my @mapped_to = $mailmap->map('email' => '<cto@coompany.xx>');
+    # mapped_to => is_deeply (undef, '<cto@company.xx>')
 
 =head1 REQUIREMENTS
 
@@ -76,8 +90,8 @@ Readonly::Scalar my $EMPTY_STRING => q{};
 Readonly::Scalar my $LF           => qq{\n};
 Readonly::Scalar my $EMAIL_ADDRESS_REGEXP =>
   q{<[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+.>};    ## no critic (ValuesAndExpressions::RequireInterpolationOfMetachars)
-Readonly::Hash   my %VALIDATE_PARAM_EMAIL => ('regex' => qr/$EMAIL_ADDRESS_REGEXP/);
-Readonly::Hash   my %VALIDATE_PARAM_NONBLANK => ('regex' => qr/\S+/);
+Readonly::Hash   my %VALIDATE_PARAM_EMAIL => ('regex' => qr/$EMAIL_ADDRESS_REGEXP/msx);
+Readonly::Hash   my %VALIDATE_PARAM_NONBLANK => ('regex' => qr/\S+/msx);
 Readonly::Scalar my $PROPER_NAME => q{proper-name};
 Readonly::Scalar my $PROPER_EMAIL => q{proper-email};
 Readonly::Scalar my $COMMIT_NAME => q{commit-name};
@@ -114,7 +128,7 @@ sub new {
 
 Map the committer name and email to proper name/email. The email can be
 proper-email or committer-email (alias). Email is mandatory parameter.
-If name is given aswell, then looks for both. If only email, then
+If also name is given, then looks for both. If only email, then
 the mapping is done to the first matching email address,
 regardless of the name.
 
@@ -291,7 +305,7 @@ don't set the *-name parameters!
 
 =back
 
-=item Return: [NONE]
+=item Return: 1/0, 1 if verified to exist.
 
 =back
 
@@ -418,7 +432,7 @@ sub remove {    ## no critic (Subroutines/ProhibitExcessComplexity)
                     my $alias;
                     for ( my $j = 0 ; $j < scalar @{$aliases} ; ) {    ## no critic (ControlStructures::ProhibitCStyleForLoops)
                         my $for_alias = $aliases->[$j];
-                        if ( $for_alias->{'commit-email'} eq $params{'commit-email'} ) {
+                        if ( $for_alias->{'commit-email'} eq $params{'commit-email'} ) { ## no critic (ControlStructures::ProhibitDeepNests)
                             splice @{$aliases}, $j, 1;
                             last;
                         }
