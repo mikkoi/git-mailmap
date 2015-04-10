@@ -27,8 +27,7 @@ Package Git::Mailmap is currently being developed so changes in the API and func
     Other Author <other@author.xx>   nick2 <bugs@company.xx>
     ';
 
-    my $mailmap = Git::Mailmap->new(); # => isa 'Git::Mailmap2'
-    $mailmap->from_string($mailmap_file_as_string);
+    my $mailmap = Git::Mailmap->from_string($mailmap_file_as_string);
     my $correct = $mailmap->verify( 'proper-email' => '<cto@company.xx>'); # => 1
     my $fail = $mailmap->verify(
             'proper-email' => '<cto@company.xx>',
@@ -478,6 +477,9 @@ Read the committers from a string.
 
 sub from_string {
     my $self   = shift;
+    # Call the constructor if called as a class method
+    $self = $self->new unless ref $self;
+
     my %params = validate(
         @_,
         {
@@ -528,7 +530,8 @@ sub from_string {
     }
 
     $log->tracef( 'Exiting from_string: %s', $self );
-    return;
+
+    $self
 }
 
 =head2 to_string
