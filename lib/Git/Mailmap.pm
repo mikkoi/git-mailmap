@@ -7,8 +7,7 @@ package Git::Mailmap;
 
 use strict;
 use warnings;
-use 5.010_000;
-use Data::Dumper;
+use 5.010000;
 
 # ABSTRACT: Construct and read/write Git mailmap file.
 
@@ -534,10 +533,7 @@ sub from_string {
 
 =head2 to_string
 
-Return a string. If you give the parameter I<filename>,
-the mailmap will be written directly to file. If you give no parameters,
-this method will return a string consisting of the same text which otherwise
-would have been written to a file.
+Return a mailmap file as string.
 
 =over 8
 
