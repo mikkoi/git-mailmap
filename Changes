@@ -2,4 +2,6 @@ Revision history for {{$dist->name}}
 
 {{$NEXT}}
 
+0.002     2015-04-11 22:48:26+03:00 Europe/Helsinki
+
 0.001     2015-03-30 01:02:04+03:00 Europe/Helsinki   Initial version.
