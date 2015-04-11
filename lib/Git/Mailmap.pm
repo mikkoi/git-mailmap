@@ -27,7 +27,12 @@ Package Git::Mailmap is currently being developed so changes in the API and func
     Other Author <other@author.xx>   nick2 <bugs@company.xx>
     ';
 
-    my $mailmap = Git::Mailmap->from_string($mailmap_file_as_string);
+    my $plain_mailmap = Git::Mailmap->new(); # => isa 'Git::Mailmap'
+    $plain_mailmap->from_string('mailmap' => $mailmap_file_as_string);
+
+    # OR:
+
+    my $mailmap = Git::Mailmap->from_string('mailmap' => $mailmap_file_as_string); # => isa 'Git::Mailmap'
     my $correct = $mailmap->verify( 'proper-email' => '<cto@company.xx>'); # => 1
     my $fail = $mailmap->verify(
             'proper-email' => '<cto@company.xx>',
@@ -72,7 +77,8 @@ The Git::Mailmap package requires the following packages (in addition to normal 
 =cut
 
 use Log::Any qw{$log};
-use Hash::Util 0.06 qw{lock_keys lock_keys_plus unlock_keys};
+use Hash::Util 0.06 qw{lock_keys};
+use Scalar::Util qw(blessed);
 use Carp;
 use Carp::Assert;
 use Carp::Assert::More;
@@ -457,7 +463,9 @@ sub remove {    ## no critic (Subroutines/ProhibitExcessComplexity)
 
 =head2 from_string
 
-Read the committers from a string.
+Read the committers from a string. If any committers already exist,
+these will not be removed. If called as a class method (creator method
+instead of method new()), will also create the object and return it.
 
 =over 8
 
@@ -469,16 +477,27 @@ Read the committers from a string.
 
 =back
 
-=item Return: [NONE].
+=item Return: if called as a class method, returns the object; otherwise [NONE].
 
 =back
 
 =cut
 
 sub from_string {
-    my $self   = shift;
+    my $self = shift;
+
     # Call the constructor if called as a class method
-    $self = $self->new unless ref $self;
+    my $called_as_class = 0;
+    if ( !blessed $self ) {
+        $called_as_class = 1;
+
+        # Possible ways to call:
+        # Git::Mailmap::from_string(mailmap => file)
+        # Git::Mailmap->from_string(mailmap => file)
+        # Fix here the latter.
+        if ( $self ne __PACKAGE__ ) { unshift @_, $self; }
+        $self = __PACKAGE__->new();
+    }
 
     my %params = validate(
         @_,
@@ -530,8 +549,12 @@ sub from_string {
     }
 
     $log->tracef( 'Exiting from_string: %s', $self );
-
-    $self
+    if ($called_as_class) {
+        return $self;
+    }
+    else {
+        return;
+    }
 }
 
 =head2 to_string
