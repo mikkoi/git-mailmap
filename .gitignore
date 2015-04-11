@@ -1,2 +1,6 @@
 Git-Mailmap-*
 .build
+
+# Plenv users
+.perl-version
+
