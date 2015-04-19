@@ -80,9 +80,5 @@ my $another_mailmap = Git::Mailmap->from_string( 'mailmap' => $given_mailmap_fil
 
 is_deeply( $another_mailmap, $mailmap, 'Second object is equal to another object.' );
 
-my $third_mailmap = Git::Mailmap::from_string( 'mailmap' => $given_mailmap_file );
-
-is_deeply( $third_mailmap, $mailmap, 'Third object is equal to the original object.' );
-
 done_testing();
 

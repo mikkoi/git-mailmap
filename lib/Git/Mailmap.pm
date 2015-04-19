@@ -46,6 +46,9 @@ Package Git::Mailmap is currently being developed so changes in the API and func
     my @mapped_to = $mailmap->map('email' => '<cto@coompany.xx>');
     # mapped_to => is_deeply (undef, '<cto@company.xx>')
 
+    # Return map as string for writing to file.
+    my $map = $mailmap->to_string(); # => like qr/Some Dude/
+
 =head1 DESCRIPTION
 
 Git::Mailmap is a Perl implementation of the mailmap functionality in Git.
@@ -464,7 +467,8 @@ sub remove {    ## no critic (Subroutines/ProhibitExcessComplexity)
 =head2 from_string
 
 Read the committers from a string. If any committers already exist,
-these will not be removed. If called as a class method (creator method
+these will B<not> be removed; so it is possible to merge mailmap files.
+If called as a class method (creator method
 instead of method new()), will also create the object and return it.
 
 =over 8
@@ -477,7 +481,7 @@ instead of method new()), will also create the object and return it.
 
 =back
 
-=item Return: if called as a class method, returns the object; otherwise [NONE].
+=item Return: the object.
 
 =back
 
@@ -486,17 +490,12 @@ instead of method new()), will also create the object and return it.
 sub from_string {
     my $self = shift;
 
-    # Call the constructor if called as a class method
-    my $called_as_class = 0;
     if ( !blessed $self ) {
-        $called_as_class = 1;
-
-        # Possible ways to call:
-        # Git::Mailmap::from_string(mailmap => file)
+        # Assuming called as:
         # Git::Mailmap->from_string(mailmap => file)
-        # Fix here the latter.
-        if ( $self ne __PACKAGE__ ) { unshift @_, $self; }
-        $self = __PACKAGE__->new();
+        # if ( $self ne __PACKAGE__ ) { unshift @_, $self; }
+	# $self now contains the package name.
+        $self = $self->new();
     }
 
     my %params = validate(
@@ -549,12 +548,7 @@ sub from_string {
     }
 
     $log->tracef( 'Exiting from_string: %s', $self );
-    if ($called_as_class) {
-        return $self;
-    }
-    else {
-        return;
-    }
+    return $self;
 }
 
 =head2 to_string
@@ -617,6 +611,4 @@ sub to_string {
 }
 
 1;
-
-__END__
 

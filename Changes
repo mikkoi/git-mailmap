@@ -1,6 +1,10 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+          Added method to_string to SYNOPSIS.
+          Removed __END__ from module end.
+          Method from_string now always returns the object, not just when called as creator method.
+          Enabled release test Test::Synopsis again.
 
 0.002     2015-04-11 22:48:26+03:00 Europe/Helsinki
 
