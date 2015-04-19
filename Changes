@@ -1,6 +1,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+0.003     2015-04-19 12:54:14+03:00 Europe/Helsinki
           Added method to_string to SYNOPSIS.
           Removed __END__ from module end.
           Method from_string now always returns the object, not just when called as creator method.
