@@ -1,6 +1,10 @@
+# Build files
 Git-Mailmap-*
 .build
 
 # Plenv users
 .perl-version
+
+# The Vi/Vim temporary files
+*.swp
 
