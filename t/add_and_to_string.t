@@ -71,8 +71,7 @@ push @{ $expected_mailmap{'committers'} },
         },
     ],
   };
-is_deeply( $mailmap, \%expected_mailmap,
-    'Object has three committers, one has two emails.' );
+is_deeply( $mailmap, \%expected_mailmap, 'Object has three committers, one has two emails.' );
 
 $mailmap->add(
     'proper-email' => '<santa.claus@northpole.xx>',
@@ -89,8 +88,48 @@ push @{ $expected_mailmap{'committers'} },
         },
     ],
   };
-is_deeply( $mailmap, \%expected_mailmap,
-    'Object has four committers, one has two emails.' );
+is_deeply( $mailmap, \%expected_mailmap, 'Object has four committers, one has two emails.' );
+
+$mailmap->add(
+    'proper-email' => '<me.myself@comp.xx>',
+    'proper-name'  => 'Me Myself',
+    'commit-email' => '<me.myself@comp.xx>',
+    'commit-name'  => 'Me I Myself',
+);
+$mailmap->add(
+    'proper-email' => '<me.myself@comp.xx>',
+    'commit-email' => '<me@comp.xx>',
+    'commit-name'  => 'me',
+);
+$mailmap->add(
+    'proper-email' => '<me.myself@comp.xx>',
+    'commit-email' => '<me.myself@comp.xx>',
+    'commit-name'  => 'me',
+);
+$mailmap->add(
+    'proper-email' => '<me.myself@comp.xx>',
+    'proper-name'  => 'Me Too Myself',
+);
+push @{ $expected_mailmap{'committers'} },
+  {
+    'proper-email' => '<me.myself@comp.xx>',
+    'proper-name'  => 'Me Too Myself',
+    'aliases'      => [
+        {
+            'commit-email' => '<me.myself@comp.xx>',
+            'commit-name'  => 'Me I Myself',
+        },
+        {
+            'commit-email' => '<me@comp.xx>',
+            'commit-name'  => 'me',
+        },
+        {
+            'commit-email' => '<me.myself@comp.xx>',
+            'commit-name'  => 'me',
+        },
+    ],
+  };
+is_deeply( $mailmap, \%expected_mailmap, 'Object has five committers, one has three emails.' );
 
 my $mailmap_file = $mailmap->to_string();
 
@@ -100,6 +139,9 @@ Some Dude <some@dude.xx> nick1 <bugs@company.xx>
 Other Author <other@author.xx> nick2 <bugs@company.xx>
 Other Author <other@author.xx> <nick2@company.xx>
 Santa Claus <santa.claus@northpole.xx> <me@company.xx>
+Me Too Myself <me.myself@comp.xx> Me I Myself <me.myself@comp.xx>
+Me Too Myself <me.myself@comp.xx> me <me@comp.xx>
+Me Too Myself <me.myself@comp.xx> me <me.myself@comp.xx>
 ';
 is( $mailmap_file, $expected_mailmap_file, 'Printed out exactly as expected.' );
 
