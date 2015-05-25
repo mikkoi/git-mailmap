@@ -1,6 +1,7 @@
 Revision history for {{$dist->name}}
 
-{{$NEXT}}
+{{$NEXT}} Changed aliases: one email, one name -> one email, many names. Added to test.
+          Fixed minor bugs.
 
 0.003     2015-04-19 12:54:14+03:00 Europe/Helsinki
           Added method to_string to SYNOPSIS.
